@@ -1,4 +1,3 @@
-import 'package:doctor_partner/screens/HomeScreen.dart';
 import 'package:doctor_partner/screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';

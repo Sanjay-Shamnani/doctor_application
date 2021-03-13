@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:doctor_partner/constants/constants.dart';
 import 'package:doctor_partner/services/api_urls.dart';
@@ -13,6 +14,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   String patientReview;
   TextEditingController patientReviewController = TextEditingController();
+  TextEditingController patientTokenController = TextEditingController();
   String displayTime = "00:00:00";
   var swatch = Stopwatch();
   final dur = const Duration(seconds: 1);
@@ -67,6 +69,7 @@ class _HomeState extends State<Home> {
               child: Text('OKAY'),
               onPressed: () {
                 patientReviewController.clear();
+                patientTokenController.clear();
                 Navigator.of(context).pop();
               },
             ),
@@ -99,14 +102,19 @@ class _HomeState extends State<Home> {
 
     String feedback = patientReviewController.text;
 
-    Map<String, String> feedbackMap = {
-      "duration": "$timeInMin",
-      "feedback": "$feedback"
+    Map<String, dynamic> feedbackMap = {
+      "duration": timeInMin,
+      "feedback": feedback
     };
 
-    String url = ApiUrls().feedbackUrl();
+    String url = ApiUrls().feedbackUrl(patientTokenController.text);
+    print("\n");
+    print(url);
+    print("\n");
 
-    final response = await http.post(url, body: feedbackMap);
+    final response = await http.post(url,
+        headers: {"Content-Type": "application/json"},
+        body: json.encode(feedbackMap));
 
     if (response.statusCode == 200) {
       print("FeedbackSubmitted Successfully");
@@ -139,7 +147,6 @@ class _HomeState extends State<Home> {
                 margin: EdgeInsets.only(bottom: 35),
                 child: SingleChildScrollView(
                   child: Container(
-                    
                     height: MediaQuery.of(context).size.height * 0.33,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -175,9 +182,22 @@ class _HomeState extends State<Home> {
                         ),
                         Container(
                           child: TextField(
-                            style: TextStyle(
-                              fontSize: 22.5
+                            style: TextStyle(fontSize: 22.5),
+                            controller: patientTokenController,
+                            onSubmitted: (value) {
+                              setState(() {
+                                patientReview = value;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              labelText: "Enter Patient Token",
+                              hintText: "Token",
                             ),
+                          ),
+                        ),
+                        Container(
+                          child: TextField(
+                            style: TextStyle(fontSize: 22.5),
                             controller: patientReviewController,
                             onSubmitted: (value) {
                               setState(() {

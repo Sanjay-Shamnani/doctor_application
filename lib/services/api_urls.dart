@@ -1,5 +1,5 @@
 class ApiUrls {
-  String feedbackUrl() {
-    return "https://pqt9queuewaittime.herokuapp.com/dur-create/1/";
+  String feedbackUrl(String token) {
+    return "https://pqt9queuewaittime.herokuapp.com/dur-create/$token/";
   }
 }

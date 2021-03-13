@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:doctor_partner/constants/constants.dart';
+import 'package:doctor_partner/services/api_urls.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class Home extends StatefulWidget {
   @override
@@ -9,6 +11,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  String patientReview;
+  TextEditingController patientReviewController = TextEditingController();
   String displayTime = "00:00:00";
   var swatch = Stopwatch();
   final dur = const Duration(seconds: 1);
@@ -32,7 +36,7 @@ class _HomeState extends State<Home> {
         var sec = swatch.elapsed.inSeconds % 60;
         var min = swatch.elapsed.inMinutes % 60;
         var hours = swatch.elapsed.inHours % 24;
-        
+
         displayTime = hours.toString().padLeft(2, "0") +
             ":" +
             min.toString().padLeft(2, "0") +
@@ -62,6 +66,7 @@ class _HomeState extends State<Home> {
             TextButton(
               child: Text('OKAY'),
               onPressed: () {
+                patientReviewController.clear();
                 Navigator.of(context).pop();
               },
             ),
@@ -81,11 +86,31 @@ class _HomeState extends State<Home> {
 
     var timeInMin = convertTimeinMin(swatch.elapsed.inHours,
         swatch.elapsed.inMinutes, swatch.elapsed.inSeconds);
-  
+
     Map<String, dynamic> consultingTimeMap = {"consultingTime": timeInMin};
 
     doctorCollectionReference.add(consultingTimeMap);
     showSuccessDialogBox();
+  }
+
+  sendFeedback() async {
+    var timeInMin = convertTimeinMin(swatch.elapsed.inHours,
+        swatch.elapsed.inMinutes, swatch.elapsed.inSeconds);
+
+    String feedback = patientReviewController.text;
+
+    Map<String, String> feedbackMap = {
+      "duration": "$timeInMin",
+      "feedback": "$feedback"
+    };
+
+    String url = ApiUrls().feedbackUrl();
+
+    final response = await http.post(url, body: feedbackMap);
+
+    if (response.statusCode == 200) {
+      print("FeedbackSubmitted Successfully");
+    }
   }
 
   @override
@@ -112,53 +137,77 @@ class _HomeState extends State<Home> {
               flex: 4,
               child: Container(
                 margin: EdgeInsets.only(bottom: 35),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+                child: SingleChildScrollView(
+                  child: Container(
+                    
+                    height: MediaQuery.of(context).size.height * 0.33,
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Container(
+                              width: MediaQuery.of(context).size.width * 0.4,
+                              height: 40,
+                              child: RaisedButton(
+                                child: Text('START'),
+                                onPressed: () {
+                                  decrementNQ();
+                                  swatch.start();
+                                  startTimer();
+                                },
+                                color: Colors.green,
+                              ),
+                            ),
+                            Container(
+                              width: MediaQuery.of(context).size.width * 0.4,
+                              height: 40,
+                              child: RaisedButton(
+                                onPressed: () {
+                                  swatch.stop();
+                                },
+                                child: Text('STOP'),
+                                color: Colors.red,
+                              ),
+                            )
+                          ],
+                        ),
                         Container(
-                          width: MediaQuery.of(context).size.width * 0.4,
-                          height: 40,
-                          child: RaisedButton(
-                            child: Text('START'),
-                            onPressed: () {
-                              decrementNQ();
-                              swatch.start();
-                              startTimer();
+                          child: TextField(
+                            style: TextStyle(
+                              fontSize: 22.5
+                            ),
+                            controller: patientReviewController,
+                            onSubmitted: (value) {
+                              setState(() {
+                                patientReview = value;
+                              });
                             },
-                            color: Colors.green,
+                            decoration: InputDecoration(
+                              labelText: "Enter Patient Feedback",
+                              hintText: "Feedback",
+                            ),
                           ),
                         ),
                         Container(
-                          width: MediaQuery.of(context).size.width * 0.4,
-                          height: 40,
+                          width: double.infinity,
+                          height: 60,
                           child: RaisedButton(
                             onPressed: () {
-                              swatch.stop();
+                              sendFeedback();
+                              submitRecordedTime();
+                              swatch.reset();
+                              setState(() {
+                                displayTime = "00:00:00";
+                              });
                             },
-                            child: Text('STOP'),
-                            color: Colors.red,
+                            child: Text('SUBMIT'),
                           ),
                         )
                       ],
                     ),
-                    Container(
-                      width: double.infinity,
-                      height: 60,
-                      child: RaisedButton(
-                        onPressed: () {
-                          submitRecordedTime();
-                          swatch.reset();
-                          setState(() {
-                            displayTime = "00:00:00";
-                          });
-                        },
-                        child: Text('SUBMIT'),
-                      ),
-                    )
-                  ],
+                  ),
                 ),
               ),
             ),
